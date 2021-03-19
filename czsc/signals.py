@@ -5,71 +5,10 @@ from typing import List
 from .objects import Direction, BI
 from .enum import Signals
 
-def check_three_fd(fds: List[BI]) -> str:
-    """识别三段形态
-
-    :param fds: list
-        由远及近的三段形态
-    :return: str
-    """
-    v = Signals.Other.value
-
-    if len(fds) != 3:
-        warnings.warn("len(fdx) != 3，无法识别三段形态")
-        return v
-
-    fd1, fd2, fd3 = fds
-    if not (fd1.direction == fd3.direction):
-        # warnings.warn("1,3的 direction 不一致，无法识别三段形态")
-        print("1,3的 direction 不一致，无法识别三段形态")
-        return v
-
-    if fd3.direction == Direction.Down:
-        if fd3.low > fd1.high:
-            v = Signals.X3LA0.value
-
-        if fd2.low < fd3.low < fd1.high < fd2.high:
-            v = Signals.X3LB0.value
-
-        if fd1.high > fd3.high and fd1.low < fd3.low:
-            v = Signals.X3LC0.value
-
-        if fd1.high < fd3.high and fd1.low > fd3.low:
-            v = Signals.X3LD0.value
-
-        if fd3.low < fd1.low and fd3.high < fd1.high:
-            if fd3.power < fd1.power:
-                v = Signals.X3LE0.value
-            else:
-                v = Signals.X3LF0.value
-    elif fd3.direction == Direction.Up:
-        if fd3.high > fd1.low:
-            v = Signals.X3SA0.value
-
-        if fd2.low < fd1.low < fd3.high < fd2.high:
-            v = Signals.X3SB0.value
-
-        if fd1.high > fd3.high and fd1.low < fd3.low:
-            v = Signals.X3SC0.value
-
-        if fd1.high < fd3.high and fd1.low > fd3.low:
-            v = Signals.X3SD0.value
-
-        if fd3.low > fd1.low and fd3.high > fd1.high:
-            if fd3.power < fd1.power:
-                v = Signals.X3SE0.value
-            else:
-                v = Signals.X3SF0.value
-    else:
-        raise ValueError("direction 的取值错误")
-
-    return v
-
 def check_five_fd(fds: List[BI]) -> str:
     """识别五段形态
 
-    :param fds: list
-        由远及近的五段走势
+    :param fds: 由远及近的五段走势
     :return: str
     """
     v = Signals.Other.value
@@ -94,7 +33,7 @@ def check_five_fd(fds: List[BI]) -> str:
         if max(fd1.low, fd3.low) < min(fd1.high, fd3.high) < fd5.low:
             v = Signals.X5LB0.value
 
-        if fd4.high < fd2.low and fd5.power < fd3.power and max_high == fd1.high and min_low == fd5.low:
+        if fd4.high < fd2.low and fd5.power < fd3.power and max_high == fd1.high:
             v = Signals.X5LC0.value
 
         if fd1.high < fd3.high < fd5.high and fd1.low > fd3.low > fd5.low:
@@ -115,7 +54,7 @@ def check_five_fd(fds: List[BI]) -> str:
         if min(fd1.high, fd3.high) > max(fd1.low, fd3.low) > fd5.high:
             v = Signals.X5SB0.value
 
-        if max_high == fd5.high and min_low == fd1.low and fd5.power < fd1.power and fd4.low > fd2.high:
+        if min_low == fd1.low and fd5.power < fd1.power and fd4.low > fd2.high:
             v = Signals.X5SC0.value
 
         if fd1.high < fd3.high < fd5.high and fd1.low > fd3.low > fd5.low:
@@ -124,8 +63,8 @@ def check_five_fd(fds: List[BI]) -> str:
         if fd1.high > fd3.high > fd5.high and fd1.low < fd3.low < fd5.low:
             v = Signals.X5SE0.value
 
-        if (max_high == fd1.high and fd5.low < max(fd1.low, fd2.low) < fd5.high < fd1.high) \
-                or (max_high == fd3.high and fd5.low < max(fd3.low, fd4.low) < fd5.high < fd3.high):
+        if (max_high == fd1.high and fd5.low < max(fd1.low, fd2.low) < fd5.high < max_high) \
+                or (max_high == fd3.high and fd5.low < max(fd3.low, fd4.low) < fd5.high < max_high):
             v = Signals.X5SF0.value
 
     else:
@@ -135,8 +74,7 @@ def check_five_fd(fds: List[BI]) -> str:
 def check_seven_fd(fds: List[BI]) -> str:
     """识别七段形态
 
-    :param fds: list
-        由远及近的七段走势
+    :param fds: 由远及近的七段走势
     :return: str
     """
     v = Signals.Other.value
@@ -224,12 +162,17 @@ def check_nine_fd(fds: List[BI]) -> str:
                 v = Signals.X9LA0.value
 
             if min(fd2.high, fd4.high, fd6.high, fd8.high) > max(fd2.low, fd4.low, fd6.low, fd8.low) \
-                    and fd9.power < fd1.power:
+                    and fd9.power < fd1.power and fd3.low >= fd1.low and fd7.high <= fd9.high:
                 v = Signals.X9LB0.value
 
             if min(fd2.high, fd4.high, fd6.high) > max(fd2.low, fd4.low, fd6.low) > fd8.high \
                     and fd9.power < fd7.power:
                 v = Signals.X9LC0.value
+
+            if fd3.low < fd1.low and fd7.high > fd9.high \
+                    and min(fd4.high, fd6.high) > max(fd4.low, fd6.low) \
+                    and (fd1.high - fd3.low) > (fd7.high - fd9.low):
+                v = Signals.X9LD0.value
 
     elif direction == Direction.Up:
         if max_high == fd9.high and min_low == fd1.low:
@@ -241,12 +184,17 @@ def check_nine_fd(fds: List[BI]) -> str:
                 v = Signals.X9SA0.value
 
             if min(fd2.high, fd4.high, fd6.high, fd8.high) > max(fd2.low, fd4.low, fd6.low, fd8.low) \
-                    and fd9.power < fd1.power:
+                    and fd9.power < fd1.power and fd3.high <= fd1.high and fd7.low >= fd9.low:
                 v = Signals.X9SB0.value
 
             if fd8.low > min(fd2.high, fd4.high, fd6.high) > max(fd2.low, fd4.low, fd6.low) \
                     and fd9.power < fd7.power:
                 v = Signals.X9SC0.value
+
+            if fd3.high > fd1.high and fd7.low < fd9.low \
+                    and min(fd4.high, fd6.high) > max(fd4.low, fd6.low) \
+                    and (fd3.high - fd1.low) > (fd9.high - fd7.low):
+                v = Signals.X9SD0.value
 
     else:
         raise ValueError("direction 的取值错误")
